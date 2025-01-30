@@ -4,12 +4,14 @@ const cors = require('cors');
 const mongoose = require('mongoose');
 const asyncHandler = require('express-async-handler');
 const dotenv = require('dotenv');
+const cookieParser = require('cookie-parser');
 dotenv.config();
 
 const app = express();
 //?Middle wair
 app.use(cors({ origin: '*' }))
 app.use(bodyParser.json());
+app.use(cookieParser())
 //? setting static folder path
 app.use('/image/products', express.static('public/products'));
 app.use('/image/category', express.static('public/category'));
