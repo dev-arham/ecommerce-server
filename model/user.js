@@ -1,4 +1,18 @@
 const mongoose = require('mongoose');
+<<<<<<< Updated upstream
+=======
+const jwt = require("jsonwebtoken");
+const bcrypt = require('bcrypt');
+
+const AddressSchema = new mongoose.Schema({
+  street: String,
+  city: String,
+  country: {
+    type: String,
+    default: 'Pakistan'
+  },
+});
+>>>>>>> Stashed changes
 
 const userSchema = new mongoose.Schema({
   name: {
