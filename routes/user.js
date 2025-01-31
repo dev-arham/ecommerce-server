@@ -61,9 +61,12 @@ router.post('/login', async (req, res) => {
         res.status(500).json({ success: false, message: error.message });
     }
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
 });
 
 =======
+=======
+>>>>>>> Stashed changes
     const user = await User.findOne({ name });
 
     // GENERATE REFRESH TOKEN 
@@ -261,6 +264,9 @@ const updateUserProfile = asyncHandler(async(req, res) => {
 })
 router.route("/profile").patch(verifyJWT, upload.single("profile"), updateUserProfile)
 
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
 
 // Get a user by ID

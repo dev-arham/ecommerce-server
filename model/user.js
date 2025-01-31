@@ -1,6 +1,9 @@
 const mongoose = require('mongoose');
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
 =======
+=======
+>>>>>>> Stashed changes
 const jwt = require("jsonwebtoken");
 const bcrypt = require('bcrypt');
 
