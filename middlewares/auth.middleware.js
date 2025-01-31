@@ -1,8 +1,8 @@
-import { asyncHandler } from "../utils/asyncHandler.js";
-import jwt from "jsonwebtoken"
-import { User } from "../models/user.model.js";
+const jwt = require("jsonwebtoken");
+const User = require("../model/user.js");
+const asyncHandler = require("express-async-handler");
 
-export const verifyJWT = asyncHandler(async(req, _, next) => {
+const verifyJWT = asyncHandler(async(req, _, next) => {
     try {
         const token = req.cookies?.accessToken || req.header("Authorization")?.replace("Bearer ", "")
         
@@ -29,3 +29,5 @@ export const verifyJWT = asyncHandler(async(req, _, next) => {
     }
     
 })
+
+exports.verifyJWT = verifyJWT;
