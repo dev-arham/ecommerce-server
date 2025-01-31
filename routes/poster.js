@@ -1,3 +1,5 @@
+const fs = require('fs');
+const path = require('path');
 const express = require('express');
 const router = express.Router();
 const Poster = require('../model/poster');
@@ -128,11 +130,32 @@ router.put('/:id', asyncHandler(async (req, res) => {
 router.delete('/:id', asyncHandler(async (req, res) => {
     const posterID = req.params.id;
     try {
-        const deletedPoster = await Poster.findByIdAndDelete(posterID);
+        const deletedPoster = await Poster.findById(posterID);
         if (!deletedPoster) {
             return res.status(404).json({ success: false, message: "Poster not found." });
         }
-        res.json({ success: true, message: "Poster deleted successfully." });
+
+        if (deletedPoster.imageUrl) {
+            // Extract the filename from the URL
+            const filename = path.basename(deletedPoster.imageUrl);
+
+            // Construct the correct path to the image file
+            const imagePath = path.join(__dirname, '../public/posters', filename);
+
+            // Delete the file
+            await fs.promises.unlink(imagePath, async (err) => {
+                if (err) {
+                    console.error("Failed to delete image file:", err);
+                    return res.status(404).json({ success: false, message: "Image not found." });
+                    // You can choose to handle the error or continue with the category deletion
+                } else {
+                    console.log("Image file deleted successfully:", imagePath);
+                }
+            });
+
+            await Poster.findByIdAndDelete(posterID);
+            res.json({ success: true, message: "Poster deleted successfully." });
+        }
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
     }

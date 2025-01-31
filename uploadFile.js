@@ -1,11 +1,16 @@
 const multer = require('multer');
+const fs = require('fs');
 const path = require('path');
 
 const storageCategory = multer.diskStorage({
-  destination: function(req, file, cb) {
-    cb(null, './public/category');
+  destination: (_, __, cb) => {
+    const uploadDir = './public/category';
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
+    }
+    cb(null, uploadDir);
   },
-  filename: function(req, file, cb) {
+  filename: function (req, file, cb) {
     // Check file type based on its extension
     const filetypes = /jpeg|jpg|png/;
     const extname = filetypes.test(path.extname(file.originalname).toLowerCase());
@@ -26,10 +31,14 @@ const uploadCategory = multer({
 });
 
 const storageProduct = multer.diskStorage({
-  destination: function(req, file, cb) {
-    cb(null, './public/products');
+  destination: (_, __, cb) => {
+    const uploadDir = './public/products';
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
+    }
+    cb(null, uploadDir);
   },
-  filename: function(req, file, cb) {
+  filename: function (_, file, cb) {
     // Check file type based on its extension
     const filetypes = /jpeg|jpg|png/;
     const extname = filetypes.test(path.extname(file.originalname).toLowerCase());
@@ -51,10 +60,14 @@ const uploadProduct = multer({
 
 
 const storagePoster = multer.diskStorage({
-  destination: function(req, file, cb) {
-    cb(null, './public/posters');
+  destination: (_, __, cb) => {
+    const uploadDir = './public/posters';
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
+    }
+    cb(null, uploadDir);
   },
-  filename: function(req, file, cb) {
+  filename: function (_, file, cb) {
     // Check file type based on its extension
     const filetypes = /jpeg|jpg|png/;
     const extname = filetypes.test(path.extname(file.originalname).toLowerCase());
@@ -75,7 +88,7 @@ const uploadPosters = multer({
 });
 
 module.exports = {
-    uploadCategory,
-    uploadProduct,
-    uploadPosters,
+  uploadCategory,
+  uploadProduct,
+  uploadPosters,
 };

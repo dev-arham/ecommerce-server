@@ -1,3 +1,5 @@
+const fs = require('fs');
+const path = require('path');
 const express = require('express');
 const router = express.Router();
 const Product = require('../model/product');
@@ -113,6 +115,7 @@ router.post('/', asyncHandler(async (req, res) => {
 router.put('/:id', asyncHandler(async (req, res) => {
     const productId = req.params.id;
     try {
+        
         // Execute the Multer middleware to handle file fields
         uploadProduct.fields([
             { name: 'image1', maxCount: 1 },
@@ -177,11 +180,33 @@ router.put('/:id', asyncHandler(async (req, res) => {
 router.delete('/:id', asyncHandler(async (req, res) => {
     const productID = req.params.id;
     try {
-        const product = await Product.findByIdAndDelete(productID);
-        if (!product) {
+        const product = await Product.findById(productID);
+        if (product === null) {
             return res.status(404).json({ success: false, message: "Product not found." });
         }
-        res.json({ success: true, message: "Product deleted successfully." });
+        if (product.images.length > 0) {
+            // Iterate over the images array and delete the image files
+            product.images.forEach(async (img) => {
+                // Extract the filename from the URL
+                const filename = path.basename(img.url);
+
+                // Construct the correct path to the image file
+                const imagePath = path.join(__dirname, '../public/products', filename);
+
+                // Delete the file
+                await fs.promises.unlink(imagePath, async (err) => {
+                    if (err) {
+                        console.error("Failed to delete image file:", err);
+                        return res.status(404).json({ success: false, message: "Image not found." });
+                        // You can choose to handle the error or continue with the product deletion
+                    } else {
+                        console.log("Image file deleted successfully:", imagePath);
+                    }
+                });
+            });
+            await Product.findByIdAndDelete(productID);
+            res.json({ success: true, message: "Product deleted successfully." });
+        }
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
     }
