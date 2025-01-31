@@ -1,6 +1,6 @@
 const mongoose = require('mongoose');
-import jwt  from "jsonwebtoken";
-import bcrypt from 'bcrypt';
+const jwt = require("jsonwebtoken");
+const bcrypt = require ("bcrypt") ;
 
 const AddressSchema = new mongoose.Schema({
   street: String,
