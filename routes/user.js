@@ -3,9 +3,8 @@ const asyncHandler = require('express-async-handler');
 const router = express.Router();
 const User = require('../model/user');
 const { verifyJWT } = require('../middlewares/auth.middleware');
-import jwt from "jsonwebtoken"
-import mongoose from "mongoose";
-
+const jwt = require("jsonwebtoken");
+const upload = require("../middlewares/multer.middleware.js").upload;
 
 
 
@@ -59,6 +58,8 @@ router.post('/login', async (req, res) => {
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
     }
+    const user = await User.findOne({ name });
+
     // GENERATE REFRESH TOKEN 
     const {accessToken, refreshToken} = await generateAccessTokenAndRefreshToken(user._id)
 
@@ -82,7 +83,6 @@ router.post('/login', async (req, res) => {
 });
 
 //LOGOUT USER 
-router.route('/logout').post(verifyJWT, logoutUser)
 
 const logoutUser = asyncHandler(async(req,res) => {
     await User.findByIdAndUpdate(
@@ -107,9 +107,10 @@ const logoutUser = asyncHandler(async(req,res) => {
     
 })
 
+router.route('/logout').post(verifyJWT, logoutUser)
+
 
 //REFRESH TOKEN 
-router.route("/refresh-token").post(refreshAccessToken)
 const refreshAccessToken = asyncHandler(async (req, res) => {
     const incomingRefreshToken = req.cookies.refreshToken || req.body.refreshToken
 
@@ -160,10 +161,10 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
     }
 
 })
+router.route("/refresh-token").post(refreshAccessToken)
 
 
 //change current password 
-router.route("/change-password").post(verifyJWT, changeCurrentPassword)
 
 const changeCurrentPassword = asyncHandler(async(req, res) => {
     const {oldPassword, newPassword} = req.body
@@ -184,17 +185,17 @@ const changeCurrentPassword = asyncHandler(async(req, res) => {
     return res.status(400).json({ success: true, message:"Password Changed Successfully"  });
 
 })
+router.route("/change-password").post(verifyJWT, changeCurrentPassword)
 
 //current user 
-router.route("/current-user").get(verifyJWT, getCurrentUser)
 
 const getCurrentUser = asyncHandler(async(req, res) => {
     return res.status(200).json({ success: true, message:"User fetched successfully"  });
 
 })
+router.route("/current-user").get(verifyJWT, getCurrentUser)
 
 //update user 
-router.route("/update-account").patch(verifyJWT, updateAccountDetails)
 
 const updateAccountDetails = asyncHandler(async(req, res) => {
     const {fullName, email} = req.body
@@ -218,10 +219,10 @@ const updateAccountDetails = asyncHandler(async(req, res) => {
     return res.json({ success: true, message: "Account details updated successfully", data: user });
    
 });
+router.route("/update-account").patch(verifyJWT, updateAccountDetails)
 
 //update profile 
 
-router.route("/profile").patch(verifyJWT, upload.single("profile"), updateUserProfile)
 
 const updateUserProfile = asyncHandler(async(req, res) => {
     const avatarLocalPath = req.file?.path
@@ -252,11 +253,7 @@ const updateUserProfile = asyncHandler(async(req, res) => {
 
     return res.json({ success: true, message: "Profile image updated successfully", data: user });
 })
-
-
-
-
-
+router.route("/profile").patch(verifyJWT, upload.single("profile"), updateUserProfile)
 
 
 // Get a user by ID
