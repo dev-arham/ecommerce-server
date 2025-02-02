@@ -1,10 +1,12 @@
 const express = require('express');
 const asyncHandler = require('express-async-handler');
 const router = express.Router();
-const User = require('../model/user');
-const { verifyJWT } = require('../middlewares/auth.middleware');
+const User = require('../model/user.js');
+const { verifyJWT } = require('../middlewares/auth.middleware.js');
 const jwt = require("jsonwebtoken");
+const bcrypt = require("bcrypt");
 const upload = require("../middlewares/multer.middleware.js").upload;
+const { uploadUserImage } = require('../uploadFile');
 
 
 
@@ -37,34 +39,32 @@ router.get('/', asyncHandler(async (req, res) => {
 
 // login
 router.post('/login', async (req, res) => {
-    const { name, password } = req.body;
+    const { username, password, email } = req.body;
 
     try {
         // Check if the user exists
-        const user = await User.findOne({ name });
+        const user = await User.findOne({ $or: [{ username: username }, { email: email }] });
 
 
         if (!user) {
-            return res.status(401).json({ success: false, message: "Invalid name or password." });
+            return res.status(401).json({ success: false, message: "Invalid Credentials." });
         }
         // Check if the password is correct
         const isPasswordValid = await user.isPasswordCorrect(password)
         if (!isPasswordValid) {
-            return res.status(401).json({ success: false, message: "Invalid name or password." });
+            return res.status(401).json({ success: false, message: "Invalid Credentials." });
         }
-
-        // Authentication successful
-        res.status(200).json({ success: true, message: "Login successful.",data: user });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
     }
-    const user = await User.findOne({ name });
+    const user = await User.findOne({ $or: [{ username: username }, { email: email }] });
 
     // GENERATE REFRESH TOKEN 
     const {accessToken, refreshToken} = await generateAccessTokenAndRefreshToken(user._id)
 
+    const loggedInUser = await User.findByIdAndUpdate(user._id, { $set: { refreshToken: refreshToken } }, { new: true }).select("-password -refreshToken");
+
     // JUST FOR NOT RETURN PASSWORD AND TOKEN TO THE USER
-    const loggedInUser = await User.findById(user._id).select("-password -refreshToken")
 
     //COOKIE
     const option = {
@@ -77,7 +77,9 @@ router.post('/login', async (req, res) => {
     .json({
        success:true,
        message :"Login Successful",
-       data: "",
+       data: loggedInUser,
+       accessToken: accessToken,
+       refreshToken: refreshToken,
     })
    
 });
@@ -104,6 +106,7 @@ const logoutUser = asyncHandler(async(req,res) => {
     return res.status(200)
     .clearCookie("accessToken" , option)
     .clearCookie("refreshToken" , option)
+    .json({success:true, message:"Logout Successful"})
     
 })
 
@@ -133,7 +136,7 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
 
         }
     
-        if (incomingRefreshToken !== user?.refreshToken) {
+        if (incomingRefreshToken !== user.refreshToken) {
             res.status(401).json({ success: false, message:"Refresh token is expired or used"  });
             
         }
@@ -143,21 +146,14 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
             secure: true
         }
     
-        const {accessToken, newRefreshToken} = await generateAccessAndRefereshTokens(user._id)
+        const accessToken  = await user.generateAccessToken();
     
         return res
         .status(200)
         .cookie("accessToken", accessToken, options)
-        .cookie("refreshToken", newRefreshToken, options)
-        .json(
-            new ApiResponse(
-                200, 
-                {accessToken, refreshToken: newRefreshToken},
-                "Access token refreshed"
-            )
-        )
+        .json({success: true, accessToken: accessToken, message : "Access token refreshed"})
     } catch (error) {
-        throw new ApiError(401, error?.message || "Invalid refresh token")
+        res.status(401).json({success : false, message : error?.message || "Invalid refresh token"})
     }
 
 })
@@ -190,10 +186,17 @@ router.route("/change-password").post(verifyJWT, changeCurrentPassword)
 //current user 
 
 const getCurrentUser = asyncHandler(async(req, res) => {
-    return res.status(200).json({ success: true, message:"User fetched successfully"  });
+    return res.status(200).json({ success: true, message:"User fetched successfully", data: req.user});
 
 })
 router.route("/current-user").get(verifyJWT, getCurrentUser)
+
+//verify user
+const verifyCurrentUser = asyncHandler(async(req, res) => {
+    return res.status(200).json({ success: true, message:"User verified successfully"});
+
+})
+router.route("/verify-user").get(verifyJWT, verifyCurrentUser)
 
 //update user 
 
@@ -224,36 +227,42 @@ router.route("/update-account").patch(verifyJWT, updateAccountDetails)
 //update profile 
 
 
-const updateUserProfile = asyncHandler(async(req, res) => {
-    const avatarLocalPath = req.file?.path
-
-    if (!profileLocalPath) {
-        res.json({ success: false, message: "Profile is missing " });
-    }
-
+const updateUserProfileImage = asyncHandler(async(req, res) => {
     
-
-    const avatar = await uploadOnCloudinary(profileLocalPath)
-
-    if (!profile.url) {
-        
-        res.json({ success: false, message: "Error while Uploading " });
-        
-    }
-
-    const user = await User.findByIdAndUpdate(
-        req.user?._id,
-        {
-            $set:{
-                profile: profile.url
+    try {
+        const userID = req.params.id
+        uploadUserImage.single('img')(req, res, async function (err) {
+            if (err instanceof multer.MulterError) {
+                if (err.code === 'LIMIT_FILE_SIZE') {
+                    err.message = 'File size is too large. Maximum filesize is 5MB.';
+                }
+                console.log(`Update category: ${err.message}`);
+                return res.json({ success: false, message: err.message });
+            } else if (err) {
+                console.log(`Update category: ${err.message}`);
+                return res.json({ success: false, message: err.message });
             }
-        },
-        {new: true}
-    ).select("-password")
 
-    return res.json({ success: true, message: "Profile image updated successfully", data: user });
+            if (req.file) {
+                const image = `${serverUrl}:${serverPort}/image/users/${req.file.filename}`;
+                try {
+                    const upadteProfile = await User.findByIdAndUpdate(userID, { $set:{profilePicture: image} }, { new: true }).select("-password");
+                    if (!upadteProfile) {
+                        return res.status(404).json({ success: false, message: "User not found." });
+                    }
+                    res.json({ success: true, message: "Profile image updated successfully.", data: upadteProfile });
+                } catch (error) {
+                    res.status(500).json({ success: false, message: error.message });
+                }
+            }else{
+                return res.status(400).json({ success: false, message: "image is required." });
+            }
+        });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
 })
-router.route("/profile").patch(verifyJWT, upload.single("profile"), updateUserProfile)
+router.route("/profile-image/:id").patch(verifyJWT, updateUserProfileImage)
 
 
 // Get a user by ID
@@ -272,15 +281,16 @@ router.get('/:id', asyncHandler(async (req, res) => {
 
 // Create a new user
 router.post('/register', asyncHandler(async (req, res) => {
-    const { name, password } = req.body;
-    if (!name || !password) {
-        return res.status(400).json({ success: false, message: "Name, and password are required." });
+    const { firstName, lastName, username, phone, email, password } = req.body;
+    if (!firstName || !lastName || !username || !email || !password || !phone) {
+        return res.status(400).json({ success: false, message: "Please enter required fields!" });
     }
 
     try {
-        const user = new User({ name, password });
-        const newUser = await user.save();
-        res.json({ success: true, message: "User created successfully.", data: null });
+        const encryptedPassword = await bcrypt.hash(password, 10);
+        const user = new User({username: username, password: encryptedPassword, email: email, firstName: firstName, lastName: lastName, phone: phone});
+        await user.save();
+        res.json({ success: true, message: "User created successfully."});
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
     }

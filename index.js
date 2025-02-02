@@ -17,6 +17,7 @@ app.use(cookieParser())
 app.use('/image/products', express.static('public/products'));
 app.use('/image/category', express.static('public/category'));
 app.use('/image/poster', express.static('public/posters'));
+app.use('/image/users', express.static('public/users'));
 
 const hostUrl = process.env.SERVER_URL;
 const port = process.env.PORT;
@@ -54,7 +55,7 @@ app.use((error, req, res, next) => {
 });
 
 
-app.listen(port, () => {
+app.listen(port, hostUrl, () => {
     console.log(`Server running on port ${process.env.PORT}`);
 });
 

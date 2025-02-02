@@ -20,6 +20,7 @@ const userSchema = new mongoose.Schema({
     trim : true,
     index : true
   },
+
   email: {
     type: String,
     required: true,
@@ -28,38 +29,56 @@ const userSchema = new mongoose.Schema({
     trim : true,
   },
 
-  fullName: {
+  phone: {
+    type: String,
+    required: [true, 'Phone number is required'],
+    unique: true,
+    validate: {
+      validator: function (value) {
+        return /^(?:\+92|0092|92|0)?3[0-9]{2}[0-9]{7}$/.test(value);
+      },
+      message: props => `${props.value} is not a valid phone number!`
+    }
+  },
+
+  firstName: {
     type: String,
     required: true,
     index : true,
   },
-  profile :{
-    type:String,   //cloudinary url
-    required : true,
+
+  lastName: {
+    type: String,
+    required: true,
+    index : true,
   },
+
+  profilePicture: {
+    type : String,
+    default : 'http://localhost:3000/image/users/dummy.png',
+  },
+
   password: {
     type: String,
     required: [true , 'Password is required'],
   },
+
   address :{
     type : [AddressSchema],
   },
+
   refreshToken:{
     type : String,
+  },
+
+  accessToken:{
+    type : String,
   }
-  
 },
 {
   timestamps:true
 }
 );
-
-userSchema.pre("save" , async function (next) {
-  if (!this.isModified("password")) return next()  ;
-    
-  this.password = bcrypt.hash(this.password, 10)
-  next()
-} )
 
 
 userSchema.methods.isPasswordCorrect = async function (password) {
