@@ -10,10 +10,6 @@ const productSchema = new mongoose.Schema({
         type: String,
         trim: true
     },
-    quantity: {
-        type: Number,
-        required: true
-    },
     price: {
         type: Number,
         required: true
@@ -21,25 +17,20 @@ const productSchema = new mongoose.Schema({
     offerPrice: {
         type: Number
     },
-    proCategoryId: {
+    proCategory: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Category',
         required: true
     },
-    proSubCategoryId: {
+    proSubCategory: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'SubCategory',
         required: true
     },
-    proBrandId: {
+    proBrand: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Brand'
     },
-    proVariantTypeId: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'VariantType'
-    },
-    proVariantId: [String],
     images: [{
         image: {
             type: Number,
@@ -49,7 +40,12 @@ const productSchema = new mongoose.Schema({
             type: String,
             required: true
         }
-    }]
+    }],
+    productVariants: [{
+        variantType: String,
+        quantity: Number,
+        variantValue: [String]
+    }],
 }, { timestamps: true });
 
 const Product = mongoose.model('Product', productSchema);

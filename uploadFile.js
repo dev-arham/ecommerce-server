@@ -83,6 +83,34 @@ const storagePoster = multer.diskStorage({
 const uploadPosters = multer({
   storage: storagePoster,
   limits: {
+    fileSize: 1024 * 1024 * 10 // limit filesize to 10MB
+  },
+});
+
+const storageUserImage = multer.diskStorage({
+  destination: (_, __, cb) => {
+    const uploadDir = './public/users';
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
+    }
+    cb(null, uploadDir);
+  },
+  filename: function (_, file, cb) {
+    // Check file type based on its extension
+    const filetypes = /jpeg|jpg|png/;
+    const extname = filetypes.test(path.extname(file.originalname).toLowerCase());
+
+    if (extname) {
+      cb(null, Date.now() + "_" + file.originalname);
+    } else {
+      cb("Error: only .jpeg, .jpg, .png files are allowed!");
+    }
+  }
+});
+
+const uploadUserImage = multer({
+  storage: storageUserImage,
+  limits: {
     fileSize: 1024 * 1024 * 5 // limit filesize to 5MB
   },
 });
@@ -91,4 +119,5 @@ module.exports = {
   uploadCategory,
   uploadProduct,
   uploadPosters,
+  uploadUserImage,
 };

@@ -73,10 +73,10 @@ router.post('/', asyncHandler(async (req, res) => {
             }
 
             // Extract product data from the request body
-            const { name, description, quantity, price, offerPrice, proCategoryId, proSubCategoryId, proBrandId, proVariantTypeId, proVariantId } = req.body;
+            const { name, description, quantity, price, offerPrice, proCategory, proSubCategory, proBrand, productVariants } = req.body;
 
             // Check if any required fields are missing
-            if (!name || !quantity || !price || !proCategoryId || !proSubCategoryId) {
+            if (!name || !quantity || !price || !proCategory || !proSubCategory) {
                 return res.status(400).json({ success: false, message: "Required fields are missing." });
             }
 
@@ -94,7 +94,7 @@ router.post('/', asyncHandler(async (req, res) => {
             });
 
             // Create a new product object with data
-            const newProduct = new Product({ name, description, quantity, price, offerPrice, proCategoryId, proSubCategoryId, proBrandId,proVariantTypeId, proVariantId, images: imageUrls });
+            const newProduct = new Product({ name: name, description: description, quantity: quantity, price: price, offerPrice: offerPrice, proCategory: proCategory, proSubCategory: proSubCategory, proBrand: proBrand, productVariants: productVariants, images: imageUrls });
 
             // Save the new product to the database
             await newProduct.save();

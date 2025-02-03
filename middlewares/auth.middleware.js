@@ -21,7 +21,7 @@ const verifyJWT = asyncHandler(async(req, _, next) => {
 
         }
     
-        req.user = user;
+        req.user = user
         next()
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
