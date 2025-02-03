@@ -16,11 +16,9 @@ const serverPort = process.env.PORT;
 router.get('/', asyncHandler(async (req, res) => {
     try {
         const products = await Product.find()
-        .populate('proCategoryId', 'id name')
-        .populate('proSubCategoryId', 'id name')
-        .populate('proBrandId', 'id name')
-        .populate('proVariantTypeId', 'id type')
-        .populate('proVariantId', 'id name');
+        .populate('proCategory', 'id name')
+        .populate('proSubCategory', 'id name')
+        .populate('proBrand', 'id name');
         res.json({ success: true, message: "Products retrieved successfully.", data: products });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
@@ -32,11 +30,9 @@ router.get('/:id', asyncHandler(async (req, res) => {
     try {
         const productID = req.params.id;
         const product = await Product.findById(productID)
-            .populate('proCategoryId', 'id name')
-            .populate('proSubCategoryId', 'id name')
-            .populate('proBrandId', 'id name')
-            .populate('proVariantTypeId', 'id name')
-            .populate('proVariantId', 'id name');
+            .populate('proCategory', 'id name')
+            .populate('proSubCategory', 'id name')
+            .populate('proBrand', 'id name');
         if (!product) {
             return res.status(404).json({ success: false, message: "Product not found." });
         }
@@ -73,10 +69,12 @@ router.post('/', asyncHandler(async (req, res) => {
             }
 
             // Extract product data from the request body
-            const { name, description, quantity, price, offerPrice, proCategory, proSubCategory, proBrand, productVariants } = req.body;
+            const { name, description,  price, offerPrice, proCategory, proSubCategory, proBrand, productVariants } = req.body;
+
+            const parsedProductVariants = JSON.parse(productVariants);
 
             // Check if any required fields are missing
-            if (!name || !quantity || !price || !proCategory || !proSubCategory) {
+            if (!name || !price || !proCategory || !proSubCategory) {
                 return res.status(400).json({ success: false, message: "Required fields are missing." });
             }
 
@@ -94,7 +92,7 @@ router.post('/', asyncHandler(async (req, res) => {
             });
 
             // Create a new product object with data
-            const newProduct = new Product({ name: name, description: description, quantity: quantity, price: price, offerPrice: offerPrice, proCategory: proCategory, proSubCategory: proSubCategory, proBrand: proBrand, productVariants: productVariants, images: imageUrls });
+            const newProduct = new Product({ name: name, description: description, price: price, offerPrice: offerPrice, proCategory: proCategory, proSubCategory: proSubCategory, proBrand: proBrand, productVariants: parsedProductVariants, images: imageUrls });
 
             // Save the new product to the database
             await newProduct.save();
@@ -129,25 +127,39 @@ router.put('/:id', asyncHandler(async (req, res) => {
                 return res.status(500).json({ success: false, message: err.message });
             }
 
-            const { name, description, quantity, price, offerPrice, proCategoryId, proSubCategoryId, proBrandId, proVariantTypeId, proVariantId } = req.body;
+
+            const { name, description, price, offerPrice, proCategory, proSubCategory, proBrand, productVariants} = req.body;
 
             // Find the product by ID
-            const productToUpdate = await Product.findById(productId);
+            
+            const parsedProductVariants = JSON.parse(productVariants);
+
+            // Update product properties if provided
+            // productToUpdate.name = name || productToUpdate.name;
+            // productToUpdate.description = description || productToUpdate.description;
+            // productToUpdate.quantity = quantity || productToUpdate.quantity;
+            // productToUpdate.price = price || productToUpdate.price;
+            // productToUpdate.offerPrice = offerPrice || productToUpdate.offerPrice;
+            // productToUpdate.proCategory = proCategory || productToUpdate.proCategory;
+            // productToUpdate.proSubCategory = proSubCategory || productToUpdate.proSubCategory;
+            // productToUpdate.proBrand = proBrand || productToUpdate.proBrand;
+            // productToUpdate.productVariants = parsedProductVariants || productToUpdate.productVariants;
+
+            const productToUpdate = await Product.findByIdAndUpdate(productId, {
+                $set: {
+                    name: name,
+                    description: description,
+                    price: price,
+                    offerPrice: offerPrice,
+                    proCategory: proCategory,
+                    proSubCategory: proSubCategory,
+                    proBrand: proBrand,
+                    productVariants: parsedProductVariants
+                }
+            }).select('-images');
             if (!productToUpdate) {
                 return res.status(404).json({ success: false, message: "Product not found." });
             }
-
-            // Update product properties if provided
-            productToUpdate.name = name || productToUpdate.name;
-            productToUpdate.description = description || productToUpdate.description;
-            productToUpdate.quantity = quantity || productToUpdate.quantity;
-            productToUpdate.price = price || productToUpdate.price;
-            productToUpdate.offerPrice = offerPrice || productToUpdate.offerPrice;
-            productToUpdate.proCategoryId = proCategoryId || productToUpdate.proCategoryId;
-            productToUpdate.proSubCategoryId = proSubCategoryId || productToUpdate.proSubCategoryId;
-            productToUpdate.proBrandId = proBrandId || productToUpdate.proBrandId;
-            productToUpdate.proVariantTypeId = proVariantTypeId || productToUpdate.proVariantTypeId;
-            productToUpdate.proVariantId = proVariantId || productToUpdate.proVariantId;
 
             // Iterate over the file fields to update images
             const fields = ['image1', 'image2', 'image3', 'image4', 'image5'];
@@ -166,8 +178,6 @@ router.put('/:id', asyncHandler(async (req, res) => {
                 }
             });
 
-            // Save the updated product
-            await productToUpdate.save();
             res.json({ success: true, message: "Product updated successfully." });
         });
     } catch (error) {

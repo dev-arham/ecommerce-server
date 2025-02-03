@@ -43,8 +43,10 @@ const productSchema = new mongoose.Schema({
     }],
     productVariants: [{
         variantType: String,
-        quantity: Number,
-        variantValue: [String]
+        variants: [{
+            variantName: String,
+            quantity: Number,
+        }]
     }],
 }, { timestamps: true });
 
