@@ -19,7 +19,7 @@ app.use('/image/category', express.static('public/category'));
 app.use('/image/poster', express.static('public/posters'));
 app.use('/image/users', express.static('public/users'));
 
-const hostUrl = process.env.SERVER_URL;
+const hostUrl = '0.0.0.0';
 const port = process.env.PORT;
 const apiEnd = process.env.API_URL_ENDPOINT;
 const DB_URL = process.env.MONGO_URL;
