@@ -154,7 +154,7 @@ router.put('/:id', asyncHandler(async (req, res) => {
             fields.forEach((field, index) => {
                 if (req.files[field] && req.files[field].length > 0) {
                     const file = req.files[field][0];
-                    const imageUrl = `http://localhost:3000/image/products/${file.filename}`;
+                    const imageUrl = `${serverUrl}:${serverPort}/image/products/${file.filename}`;
                     // Update the specific image URL in the images array
                     let imageEntry = productToUpdate.images.find(img => img.image === (index + 1));
                     if (imageEntry) {
