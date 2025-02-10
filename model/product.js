@@ -10,6 +10,10 @@ const productSchema = new mongoose.Schema({
         type: String,
         trim: true
     },
+    quantity: {
+        type: Number,
+        required: true
+    },
     price: {
         type: Number,
         required: true
@@ -41,13 +45,13 @@ const productSchema = new mongoose.Schema({
             required: true
         }
     }],
-    productVariants: [{
-        variantType: String,
-        variants: [{
-            variantName: String,
-            quantity: Number,
-        }]
-    }],
+    // productVariants: [{
+    //     variantType: String,
+    //     variants: [{
+    //         variantName: String,
+    //         quantity: Number,
+    //     }]
+    // }],
 }, { timestamps: true });
 
 const Product = mongoose.model('Product', productSchema);
