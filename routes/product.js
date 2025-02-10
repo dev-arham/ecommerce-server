@@ -70,10 +70,10 @@ router.post('/', asyncHandler(async (req, res) => {
             }
 
             // Extract product data from the request body
-            const { name, description, price, offerPrice, proCategory, proSubCategory, proBrand, productVariants } = req.body;
+            const { name, description, quantity, price, offerPrice, proCategory, proSubCategory, proBrand } = req.body;
 
             // Check if any required fields are missing
-            if (!name || !price || !proCategory || !proSubCategory, !productVariants) {
+            if (!name || !price || !quantity || !proCategory || !proSubCategory) {
                 return res.status(400).json({ success: false, message: "Required fields are missing." });
             }
 
@@ -90,10 +90,10 @@ router.post('/', asyncHandler(async (req, res) => {
                 }
             });
 
-            const parsedProductVariants = JSON.parse(productVariants);
+            // const parsedProductVariants = JSON.parse(productVariants);
 
             // Create a new product object with data
-            const newProduct = new Product({ name: name, description: description, price: price, offerPrice: offerPrice, proCategory: proCategory, proSubCategory: proSubCategory, proBrand: proBrand, productVariants: parsedProductVariants, images: imageUrls });
+            const newProduct = new Product({ name: name, description: description, quantity: quantity, price: price, offerPrice: offerPrice, proCategory: proCategory, proSubCategory: proSubCategory, proBrand: proBrand, images: imageUrls });
 
             // Save the new product to the database
             await newProduct.save();
@@ -130,7 +130,7 @@ router.put('/:id', asyncHandler(async (req, res) => {
                 return res.status(500).json({ success: false, message: err.message });
             }
 
-            const { name, description, quantity, price, offerPrice, proCategory, proSubCategory, proBrand, productVariants} = req.body;
+            const { name, description, quantity, price, offerPrice, proCategory, proSubCategory, proBrand} = req.body;
 
             // Find the product by ID
             const productToUpdate = await Product.findById(productId);
@@ -138,18 +138,19 @@ router.put('/:id', asyncHandler(async (req, res) => {
                 return res.status(404).json({ success: false, message: "Product not found." });
             }
 
-            const parsedProductVariants = JSON.parse(productVariants);
+            // const parsedProductVariants = JSON.parse(productVariants);
 
             // Update product properties if provided
             productToUpdate.name = name || productToUpdate.name;
             productToUpdate.description = description || productToUpdate.description;
+            productToUpdate.quantity = quantity || productToUpdate.quantity;
             productToUpdate.quantity = quantity || productToUpdate.quantity;
             productToUpdate.price = price || productToUpdate.price;
             productToUpdate.offerPrice = offerPrice || productToUpdate.offerPrice;
             productToUpdate.proCategory = proCategory || productToUpdate.proCategory
             productToUpdate.proSubCategory = proSubCategory || productToUpdate.proSubCategory;
             productToUpdate.proBrand = proBrand || productToUpdate.proBrand;
-            productToUpdate.productVariants = parsedProductVariants || productToUpdate.productVariants;
+            // productToUpdate.productVariants = parsedProductVariants || productToUpdate.productVariants;
 
             // Iterate over the file fields to update images
             const fields = ['image1', 'image2', 'image3', 'image4', 'image5'];
