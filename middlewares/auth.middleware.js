@@ -2,12 +2,12 @@ const jwt = require("jsonwebtoken");
 const User = require("../model/user.js");
 const asyncHandler = require("express-async-handler");
 
-const verifyJWT = asyncHandler(async(req, _, next) => {
+const verifyJWT = asyncHandler(async(req, res, next) => {
     try {
         const token = req.cookies?.accessToken || req.header("Authorization")?.replace("Bearer ", "")
         
         if (!token) {
-            res.status(500).json({ success: false, message: error.message });
+            res.status(401).json({ success: false, message: error.message });
 
         }
     
@@ -17,14 +17,14 @@ const verifyJWT = asyncHandler(async(req, _, next) => {
     
         if (!user) {
             
-            res.status(500).json({ success: false, message: "Invalid Access Token " });
+            res.status(403).json({ success: false, message: "Invalid Access Token " });
 
         }
     
         req.user = user
         next()
-    } catch (error) {
-        res.status(500).json({ success: false, message: error.message });
+    }catch(err) {
+        res.status(500).json({ success: false, message: err.message });
 
     }
     
