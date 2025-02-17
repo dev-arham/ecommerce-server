@@ -193,7 +193,7 @@ router.route("/current-user").get(verifyJWT, getCurrentUser)
 
 //verify user
 const verifyCurrentUser = asyncHandler(async(req, res) => {
-    return res.status(200).json({ success: true, message:"User verified successfully"});
+    return res.status(200).json({ success: true, message:"User verified successfully", data: req.user});
 
 })
 router.route("/verify-user").get(verifyJWT, verifyCurrentUser)
