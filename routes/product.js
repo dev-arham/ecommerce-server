@@ -26,6 +26,23 @@ router.get('/', asyncHandler(async (req, res) => {
     }
 }));
 
+// Get products by name
+router.get('/search', asyncHandler(async (req, res) => {
+    try {
+        const { name } = req.query;
+        if (!name) {
+            return res.status(400).json({ success: false, message: "Query parameter 'name' is required." });
+        }
+        const products = await Product.find({ name: { $regex: name, $options: 'i' } })
+            .populate('proCategory', 'id name')
+            .populate('proSubCategory', 'id name')
+            .populate('proBrand', 'id name');
+        res.json({ success: true, message: "Products retrieved successfully.", data: products });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+}));
+
 // Get a product by ID
 router.get('/:id', asyncHandler(async (req, res) => {
     try {
@@ -42,6 +59,7 @@ router.get('/:id', asyncHandler(async (req, res) => {
         res.status(500).json({ success: false, message: error.message });
     }
 }));
+
 
 
 
