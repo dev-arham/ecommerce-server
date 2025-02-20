@@ -145,10 +145,10 @@ router.post('/check-coupon', asyncHandler(async (req, res) => {
 
         // Check if any product in the list is not applicable for the coupon
         const isValid = products.every(product => {
-            if (coupon.applicableCategory && coupon.applicableCategory.toString() !== product.proCategoryId.toString()) {
+            if (coupon.applicableCategory && coupon.applicableCategory.toString() !== product.proCategory.toString()) {
                 return false;
             }
-            if (coupon.applicableSubCategory && coupon.applicableSubCategory.toString() !== product.proSubCategoryId.toString()) {
+            if (coupon.applicableSubCategory && coupon.applicableSubCategory.toString() !== product.proSubCategory.toString()) {
                 return false;
             }
             if (coupon.applicableProduct && !product.proVariantId.includes(coupon.applicableProduct.toString())) {
