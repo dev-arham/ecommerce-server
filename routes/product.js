@@ -79,11 +79,9 @@ router.post('/', asyncHandler(async (req, res) => {
                 if (err.code === 'LIMIT_FILE_SIZE') {
                     err.message = 'File size is too large. Maximum filesize is 5MB per image.';
                 }
-                console.log(`Add product: ${err}`);
                 return res.json({ success: false, message: err.message });
             } else if (err) {
                 // Handle other errors, if any
-                console.log(`Add product: ${err}`);
                 return res.json({ success: false, message: err });
             }
 
@@ -144,7 +142,6 @@ router.put('/:id', asyncHandler(async (req, res) => {
             { name: 'image5', maxCount: 1 }
         ])(req, res, async function (err) {
             if (err) {
-                console.log(`Update product: ${err}`);
                 return res.status(500).json({ success: false, message: err.message });
             }
 
@@ -226,7 +223,6 @@ router.delete('/:id', asyncHandler(async (req, res) => {
                         return res.status(404).json({ success: false, message: "Image not found." });
                         // You can choose to handle the error or continue with the product deletion
                     } else {
-                        console.log("Image file deleted successfully:", imagePath);
                     }
                 });
             });

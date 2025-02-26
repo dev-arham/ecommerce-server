@@ -11,7 +11,6 @@ const stripe = require('stripe')(process.env.STRIPE_SKRT_KET_TST);
 
 router.post('/stripe', asyncHandler(async (req, res) => {
   try {
-    console.log('stripe');
     const { email, name, address, amount, currency, description } = req.body;
 
     const customer = await stripe.customers.create({
@@ -43,7 +42,6 @@ router.post('/stripe', asyncHandler(async (req, res) => {
     });
 
   } catch (error) {
-    console.log(error);
     return res.json({ error: true, message: error.message, data: null });
   }
 }));
@@ -54,11 +52,9 @@ router.post('/stripe', asyncHandler(async (req, res) => {
 
 router.post('/razorpay', asyncHandler(async (req, res) => {
   try {
-    console.log('razorpay')
     const razorpayKey  = process.env.RAZORPAY_KEY_TEST
     res.json({  key: razorpayKey });
   } catch (error) {
-    console.log(error.message)
     res.status(500).json({ error: true, message: error.message, data: null });
   }
 }));
