@@ -46,10 +46,8 @@ router.post('/', asyncHandler(async (req, res) => {
                 if (err.code === 'LIMIT_FILE_SIZE') {
                     err.message = 'File size is too large. Maximum filesize is 5MB.';
                 }
-                console.log(`Add category: ${err}`);
                 return res.json({ success: false, message: err });
             } else if (err) {
-                console.log(`Add category: ${err}`);
                 return res.json({ success: false, message: err });
             }
             const { name } = req.body;
@@ -57,7 +55,6 @@ router.post('/', asyncHandler(async (req, res) => {
             if (req.file) {
                 imageUrl = `${serverUrl}:${serverPort}/image/category/${req.file.filename}`;
             }
-            console.log('url ', req.file)
 
             if (!name) {
                 return res.status(400).json({ success: false, message: "Name is required." });
@@ -78,7 +75,6 @@ router.post('/', asyncHandler(async (req, res) => {
         });
 
     } catch (err) {
-        console.log(`Error creating category: ${err.message}`);
         return res.status(500).json({ success: false, message: err.message });
     }
 }));
@@ -92,10 +88,8 @@ router.put('/:id', asyncHandler(async (req, res) => {
                 if (err.code === 'LIMIT_FILE_SIZE') {
                     err.message = 'File size is too large. Maximum filesize is 5MB.';
                 }
-                console.log(`Update category: ${err.message}`);
                 return res.json({ success: false, message: err.message });
             } else if (err) {
-                console.log(`Update category: ${err.message}`);
                 return res.json({ success: false, message: err.message });
             }
 
@@ -123,7 +117,6 @@ router.put('/:id', asyncHandler(async (req, res) => {
         });
 
     } catch (err) {
-        console.log(`Error updating category: ${err.message}`);
         return res.status(500).json({ success: false, message: err.message });
     }
 }));
@@ -165,7 +158,6 @@ router.delete('/:id', asyncHandler(async (req, res) => {
                     return res.status(404).json({ success: false, message: "Image not found." });
                     // You can choose to handle the error or continue with the category deletion
                 } else {                    
-                    console.log("Image file deleted successfully:", imagePath);
                 }
             });
 

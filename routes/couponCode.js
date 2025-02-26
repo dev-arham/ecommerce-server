@@ -68,7 +68,6 @@ router.put('/:id', asyncHandler(async (req, res) => {
     try {
         const couponID = req.params.id;
         const { couponCode, discountType, discountAmount, minimumPurchaseAmount, endDate, status, applicableCategory, applicableSubCategory, applicableProduct } = req.body;
-        console.log(req.body)
         if (!couponCode || !discountType || !discountAmount || !endDate || !status) {
             return res.status(400).json({ success: false, message: "CouponCode, discountType, discountAmount, endDate, and status are required." });
         }
@@ -106,7 +105,6 @@ router.delete('/:id', asyncHandler(async (req, res) => {
 
 
 router.post('/check-coupon', asyncHandler(async (req, res) => {
-    console.log(req.body);
     const { couponCode, productIds,purchaseAmount } = req.body;
 
     try {

@@ -236,10 +236,8 @@ const updateUserProfileImage = asyncHandler(async(req, res) => {
                 if (err.code === 'LIMIT_FILE_SIZE') {
                     err.message = 'File size is too large. Maximum filesize is 5MB.';
                 }
-                console.log(`Update category: ${err.message}`);
                 return res.json({ success: false, message: err.message });
             } else if (err) {
-                console.log(`Update category: ${err.message}`);
                 return res.json({ success: false, message: err.message });
             }
 

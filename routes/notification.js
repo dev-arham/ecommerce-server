@@ -25,7 +25,6 @@ router.post('/send-notification', asyncHandler(async (req, res) => {
 
     const response = await client.createNotification(notificationBody);
     const notificationId = response.body.id;
-    console.log('Notification sent to all users:', notificationId);
     const notification = new Notification({ notificationId, title,description,imageUrl });
     const newNotification = await notification.save();
     res.json({ success: true, message: 'Notification sent successfully', data: null });
@@ -44,7 +43,6 @@ router.get('/track-notification/:id', asyncHandler(async (req, res) => {
         errored_delivery: androidStats.android.errored,
         opened_notification: androidStats.android.converted
     };
-    console.log('Notification details:', androidStats);
     res.json({ success: true, message: 'success', data: result });
 }));
 
