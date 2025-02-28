@@ -55,7 +55,7 @@ const userSchema = new mongoose.Schema({
 
   profilePicture: {
     type : String,
-    default : 'http://localhost:3000/image/users/dummy.png',
+    default : 'https://ecom.theprimedesigns.com/image/users/dummy.png',
   },
 
   password: {
