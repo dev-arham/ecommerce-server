@@ -3,13 +3,56 @@ const asyncHandler = require('express-async-handler');
 const router = express.Router();
 const Order = require('../model/order');
 
-// Get all orders
+// Get all orders with pagination
 router.get('/', asyncHandler(async (req, res) => {
     try {
-        const orders = await Order.find()
-        .populate('couponCode', 'id couponCode discountType discountAmount')
-        .populate('userID', 'id firstName lastName').sort({ _id: -1 });
-        res.json({ success: true, message: "Orders retrieved successfully.", data: orders });
+        const page = parseInt(req.query.page) || 1;
+        const limit = Math.min(parseInt(req.query.limit) || 10, 100);
+        const search = req.query.search || '';
+        const sortBy = req.query.sortBy || '_id';
+        const sortOrder = req.query.sortOrder === 'asc' ? 1 : -1;
+        const status = req.query.status || '';
+        
+        const skip = (page - 1) * limit;
+        
+        let searchQuery = {};
+        
+        if (search) {
+            searchQuery.$or = [
+                { orderNumber: { $regex: search, $options: 'i' } },
+                { 'orderItems.productName': { $regex: search, $options: 'i' } }
+            ];
+        }
+        
+        if (status) {
+            searchQuery.orderStatus = status;
+        }
+        
+        const totalItems = await Order.countDocuments(searchQuery);
+        
+        const orders = await Order.find(searchQuery)
+            .populate('couponCode', 'id couponCode discountType discountAmount')
+            .populate('userID', 'id firstName lastName email')
+            .sort({ [sortBy]: sortOrder })
+            .skip(skip)
+            .limit(limit)
+            .lean();
+        
+        const totalPages = Math.ceil(totalItems / limit);
+        
+        res.json({
+            success: true,
+            message: "Orders retrieved successfully",
+            data: orders,
+            pagination: {
+                currentPage: page,
+                totalPages,
+                totalItems,
+                itemsPerPage: limit,
+                hasNextPage: page < totalPages,
+                hasPrevPage: page > 1
+            }
+        });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
     }

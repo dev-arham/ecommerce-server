@@ -1,6 +1,6 @@
 const mongoose = require('mongoose');
 const jwt = require("jsonwebtoken");
-const bcrypt = require ("bcrypt") ;
+const bcrypt = require("bcrypt");
 
 const AddressSchema = new mongoose.Schema({
   street: String,
@@ -16,17 +16,23 @@ const userSchema = new mongoose.Schema({
     type: String,
     required: true,
     unique: true,
-    lowercase:true,
-    trim : true,
-    index : true
+    lowercase: true,
+    trim: true,
+    index: true
+  },
+
+  role: {
+    type: String,
+    enum: ['user', 'admin'],
+    default: 'user'
   },
 
   email: {
     type: String,
     required: true,
     unique: true,
-    lowercase:true,
-    trim : true,
+    lowercase: true,
+    trim: true,
   },
 
   phone: {
@@ -44,71 +50,71 @@ const userSchema = new mongoose.Schema({
   firstName: {
     type: String,
     required: true,
-    index : true,
+    index: true,
   },
 
   lastName: {
     type: String,
     required: true,
-    index : true,
+    index: true,
   },
 
   profilePicture: {
-    type : String,
-    default : 'https://ecom.theprimedesigns.com/image/users/dummy.png',
+    type: String,
+    default: 'https://ecom.theprimedesigns.com/image/users/dummy.png',
   },
 
   password: {
     type: String,
-    required: [true , 'Password is required'],
+    required: [true, 'Password is required'],
   },
 
-  address :{
-    type : [AddressSchema],
+  address: {
+    type: [AddressSchema],
   },
 
-  refreshToken:{
-    type : String,
+  refreshToken: {
+    type: String,
   },
 
-  accessToken:{
-    type : String,
+  accessToken: {
+    type: String,
   }
 },
-{
-  timestamps:true
-}
+  {
+    timestamps: true
+  }
 );
 
 
 userSchema.methods.isPasswordCorrect = async function (password) {
-  return await bcrypt.compare(password, this.password)  
+  return await bcrypt.compare(password, this.password)
 }
 
 userSchema.methods.generateAccessToken = function () {
   return jwt.sign(
     {
-      _id : this._id,
-      email : this.email,
-      username : this.username,
-      fullName : this.fullname,
+      _id: this._id,
+      email: this.email,
+      username: this.username,
+      fullName: this.fullname,
     },
     process.env.ACCESS_TOKEN_SECRET,
     {
-      expiresIn : process.env.ACCESS_TOKEN_EXPIRY
+      expiresIn: process.env.ACCESS_TOKEN_EXPIRY
     }
 
   )
-  
+
 }
 userSchema.methods.generateRefreshToken = function () {
   return jwt.sign(
     {
-      _id : this._id
+      _id: this._id
     },
     process.env.REFRESH_TOKEN_SECRET,
     {
-      expiresIn : process.env.REFRESH_TOKEN_EXPIRY
+      expiresIn: process.env.REFRESH_TOKEN_EXPIRY
     }
   )
 }

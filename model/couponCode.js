@@ -32,9 +32,9 @@ const couponSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Category'
   },
-  applicableSubCategory: {
+  applicableBrand: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'SubCategory'
+    ref: 'Brand'
   },
   applicableProduct: {
     type: mongoose.Schema.Types.ObjectId,

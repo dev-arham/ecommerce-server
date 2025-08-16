@@ -49,8 +49,45 @@ router.get('/track-notification/:id', asyncHandler(async (req, res) => {
 
 router.get('/all-notification', asyncHandler(async (req, res) => {
     try {
-        const notifications = await Notification.find({}).sort({ _id: -1 });
-        res.json({ success: true, message: "Notifications retrieved successfully.", data: notifications });
+        const page = parseInt(req.query.page) || 1;
+        const limit = Math.min(parseInt(req.query.limit) || 10, 100);
+        const search = req.query.search || '';
+        const sortBy = req.query.sortBy || '_id';
+        const sortOrder = req.query.sortOrder === 'asc' ? 1 : -1;
+        
+        const skip = (page - 1) * limit;
+        
+        let searchQuery = {};
+        if (search) {
+            searchQuery.$or = [
+                { title: { $regex: search, $options: 'i' } },
+                { description: { $regex: search, $options: 'i' } }
+            ];
+        }
+        
+        const totalItems = await Notification.countDocuments(searchQuery);
+        
+        const notifications = await Notification.find(searchQuery)
+            .sort({ [sortBy]: sortOrder })
+            .skip(skip)
+            .limit(limit)
+            .lean();
+        
+        const totalPages = Math.ceil(totalItems / limit);
+        
+        res.json({
+            success: true,
+            message: "Notifications retrieved successfully",
+            data: notifications,
+            pagination: {
+                currentPage: page,
+                totalPages,
+                totalItems,
+                itemsPerPage: limit,
+                hasNextPage: page < totalPages,
+                hasPrevPage: page > 1
+            }
+        });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
     }

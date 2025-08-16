@@ -27,11 +27,57 @@ const generateAccessTokenAndRefreshToken = async(userId)=>{
     }
 }
 
-// Get all users
+// Get all users with pagination
 router.get('/', asyncHandler(async (req, res) => {
     try {
-        const users = await User.find();
-        res.json({ success: true, message: "Users retrieved successfully.", data: users });
+        const page = parseInt(req.query.page) || 1;
+        const limit = Math.min(parseInt(req.query.limit) || 10, 100);
+        const search = req.query.search || '';
+        const sortBy = req.query.sortBy || 'createdAt';
+        const sortOrder = req.query.sortOrder === 'asc' ? 1 : -1;
+        const role = req.query.role || '';
+        
+        const skip = (page - 1) * limit;
+        
+        let searchQuery = {};
+        
+        if (search) {
+            searchQuery.$or = [
+                { firstName: { $regex: search, $options: 'i' } },
+                { lastName: { $regex: search, $options: 'i' } },
+                { email: { $regex: search, $options: 'i' } },
+                { username: { $regex: search, $options: 'i' } }
+            ];
+        }
+        
+        if (role) {
+            searchQuery.role = role;
+        }
+        
+        const totalItems = await User.countDocuments(searchQuery);
+        
+        const users = await User.find(searchQuery)
+            .select('-password -refreshToken') // Exclude sensitive fields
+            .sort({ [sortBy]: sortOrder })
+            .skip(skip)
+            .limit(limit)
+            .lean();
+        
+        const totalPages = Math.ceil(totalItems / limit);
+        
+        res.json({
+            success: true,
+            message: "Users retrieved successfully",
+            data: users,
+            pagination: {
+                currentPage: page,
+                totalPages,
+                totalItems,
+                itemsPerPage: limit,
+                hasNextPage: page < totalPages,
+                hasPrevPage: page > 1
+            }
+        });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
     }

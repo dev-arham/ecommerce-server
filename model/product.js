@@ -21,29 +21,18 @@ const productSchema = new mongoose.Schema({
     offerPrice: {
         type: Number
     },
-    proCategory: {
+    proCategories: [{
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Category',
         required: true
-    },
-    proSubCategory: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'SubCategory',
-        required: true
-    },
+    }],
     proBrand: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Brand'
     },
     images: [{
-        image: {
-            type: String, // Changed from Number to String
-            required: true
-        },
-        url: {
-            type: String,
-            required: true
-        }
+        type: String,
+        required: true
     }],
     // productVariants: [{
     //     variantType: String,

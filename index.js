@@ -16,8 +16,10 @@ app.use(cookieParser())
 //? setting static folder path
 app.use('/image/products', express.static('public/products'));
 app.use('/image/category', express.static('public/category'));
-app.use('/image/poster', express.static('public/posters'));
+app.use('/image/posters', express.static('public/posters'));
+app.use('/image/brands', express.static('public/brands'));
 app.use('/image/users', express.static('public/users'));
+app.use('/image/media', express.static('public/media'));
 
 const hostUrl = '0.0.0.0';
 const port = process.env.PORT;
@@ -42,6 +44,8 @@ app.use(`${apiEnd}/users`, require('./routes/user'));
 app.use(`${apiEnd}/orders`, require('./routes/order'));
 app.use(`${apiEnd}/payment`, require('./routes/payment'));
 app.use(`${apiEnd}/notification`, require('./routes/notification'));
+app.use(`${apiEnd}/media`, require('./routes/media'));
+app.use(`${apiEnd}/settings`, require('./routes/settings'));
 
 
 // Example route using asyncHandler directly in app.js

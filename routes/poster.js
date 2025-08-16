@@ -1,10 +1,6 @@
-const fs = require('fs');
-const path = require('path');
 const express = require('express');
 const router = express.Router();
 const Poster = require('../model/poster');
-const { uploadPosters } = require('../uploadFile');
-const multer = require('multer');
 const asyncHandler = require('express-async-handler');
 const dotenv = require('dotenv');
 dotenv.config();
@@ -12,11 +8,48 @@ dotenv.config();
 const serverUrl = process.env.SERVER_URL;
 const serverPort = process.env.PORT;
 
-// Get all posters
+// Get all posters with pagination
 router.get('/', asyncHandler(async (req, res) => {
     try {
-        const posters = await Poster.find({});
-        res.json({ success: true, message: "Posters retrieved successfully.", data: posters });
+        const page = parseInt(req.query.page) || 1;
+        const limit = Math.min(parseInt(req.query.limit) || 10, 100);
+        const search = req.query.search || '';
+        const sortBy = req.query.sortBy || 'createdAt';
+        const sortOrder = req.query.sortOrder === 'asc' ? 1 : -1;
+        
+        const skip = (page - 1) * limit;
+        
+        let searchQuery = {};
+        if (search) {
+            searchQuery.$or = [
+                { posterName: { $regex: search, $options: 'i' } },
+                { targetUrl: { $regex: search, $options: 'i' } }
+            ];
+        }
+        
+        const totalItems = await Poster.countDocuments(searchQuery);
+        
+        const posters = await Poster.find(searchQuery)
+            .sort({ [sortBy]: sortOrder })
+            .skip(skip)
+            .limit(limit)
+            .lean();
+        
+        const totalPages = Math.ceil(totalItems / limit);
+        
+        res.json({
+            success: true,
+            message: "Posters retrieved successfully",
+            data: posters,
+            pagination: {
+                currentPage: page,
+                totalPages,
+                totalItems,
+                itemsPerPage: limit,
+                hasNextPage: page < totalPages,
+                hasPrevPage: page > 1
+            }
+        });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
     }
@@ -39,38 +72,24 @@ router.get('/:id', asyncHandler(async (req, res) => {
 // Create a new poster
 router.post('/', asyncHandler(async (req, res) => {
     try {
-        uploadPosters.single('img')(req, res, async function (err) {
-            if (err instanceof multer.MulterError) {
-                if (err.code === 'LIMIT_FILE_SIZE') {
-                    err.message = 'File size is too large. Maximum filesize is 5MB.';
-                }
-                return res.json({ success: false, message: err });
-            } else if (err) {
-                return res.json({ success: false, message: err });
-            }
-            const { posterName } = req.body;
-            let imageUrl = 'no_url';
-            if (req.file) {
-                imageUrl = `${serverUrl}:${serverPort}/image/poster/${req.file.filename}`;
-            }
+        const { posterName, imageUrl, targetUrl } = req.body;
 
-            if (!posterName) {
-                return res.status(400).json({ success: false, message: "Name is required." });
-            }
+        if (!posterName || !imageUrl) {
+            return res.status(400).json({ success: false, message: "Name and image are required." });
+        }
 
-            try {
-                const newPoster = new Poster({
-                    posterName: posterName,
-                    imageUrl: imageUrl
-                });
-                await newPoster.save();
-                res.json({ success: true, message: "Poster created successfully.", data: null });
-            } catch (error) {
-                console.error("Error creating Poster:", error);
-                res.status(500).json({ success: false, message: error.message });
-            }
-
-        });
+        try {
+            const newPoster = new Poster({
+                posterName: posterName,
+                imageUrl: imageUrl,
+                targetUrl: targetUrl
+            });
+            await newPoster.save();
+            res.json({ success: true, message: "Poster created successfully.", data: null });
+        } catch (error) {
+            console.error("Error creating Poster:", error);
+            res.status(500).json({ success: false, message: error.message });
+        }
 
     } catch (err) {
         return res.status(500).json({ success: false, message: err.message });
@@ -81,39 +100,22 @@ router.post('/', asyncHandler(async (req, res) => {
 router.put('/:id', asyncHandler(async (req, res) => {
     try {
         const categoryID = req.params.id;
-        uploadPosters.single('img')(req, res, async function (err) {
-            if (err instanceof multer.MulterError) {
-                if (err.code === 'LIMIT_FILE_SIZE') {
-                    err.message = 'File size is too large. Maximum filesize is 5MB.';
-                }
-                return res.json({ success: false, message: err.message });
-            } else if (err) {
-                return res.json({ success: false, message: err.message });
+
+        const { posterName, imageUrl, targetUrl } = req.body;
+
+        if (!posterName || !imageUrl) {
+            return res.status(400).json({ success: false, message: "Name and image are required." });
+        }
+
+        try {
+            const updatedPoster = await Poster.findByIdAndUpdate(categoryID, { posterName: posterName, imageUrl: imageUrl, targetUrl: targetUrl }, { new: true });
+            if (!updatedPoster) {
+                return res.status(404).json({ success: false, message: "Poster not found." });
             }
-
-            const { posterName } = req.body;
-            let image = req.body.image;
-
-
-            if (req.file) {
-                image = `${serverUrl}:${serverPort}/image/poster/${req.file.filename}`;
-            }
-
-            if (!posterName || !image) {
-                return res.status(400).json({ success: false, message: "Name and image are required." });
-            }
-
-            try {
-                const updatedPoster = await Poster.findByIdAndUpdate(categoryID, { posterName: posterName, imageUrl: image }, { new: true });
-                if (!updatedPoster) {
-                    return res.status(404).json({ success: false, message: "Poster not found." });
-                }
-                res.json({ success: true, message: "Poster updated successfully.", data: null });
-            } catch (error) {
-                res.status(500).json({ success: false, message: error.message });
-            }
-
-        });
+            res.json({ success: true, message: "Poster updated successfully.", data: null });
+        } catch (error) {
+            res.status(500).json({ success: false, message: error.message });
+        }
 
     } catch (err) {
         return res.status(500).json({ success: false, message: err.message });
@@ -129,26 +131,26 @@ router.delete('/:id', asyncHandler(async (req, res) => {
             return res.status(404).json({ success: false, message: "Poster not found." });
         }
 
-        if (deletedPoster.imageUrl) {
-            // Extract the filename from the URL
-            const filename = path.basename(deletedPoster.imageUrl);
+        // if (deletedPoster.imageUrl) {
+        //     // Extract the filename from the URL
+        //     const filename = path.basename(deletedPoster.imageUrl);
 
-            // Construct the correct path to the image file
-            const imagePath = path.join(__dirname, '../public/posters', filename);
+        //     // Construct the correct path to the image file
+        //     const imagePath = path.join(__dirname, '../public/posters', filename);
 
-            // Delete the file
-            await fs.promises.unlink(imagePath, async (err) => {
-                if (err) {
-                    console.error("Failed to delete image file:", err);
-                    return res.status(404).json({ success: false, message: "Image not found." });
-                    // You can choose to handle the error or continue with the category deletion
-                } else {
-                }
-            });
+        //     // Delete the file
+        //     await fs.promises.unlink(imagePath, async (err) => {
+        //         if (err) {
+        //             console.error("Failed to delete image file:", err);
+        //             return res.status(404).json({ success: false, message: "Image not found." });
+        //             // You can choose to handle the error or continue with the category deletion
+        //         } else {
+        //         }
+        //     });
 
-            await Poster.findByIdAndDelete(posterID);
-            res.json({ success: true, message: "Poster deleted successfully." });
-        }
+        // }
+        await Poster.findByIdAndDelete(posterID);
+        res.json({ success: true, message: "Poster deleted successfully." });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
     }

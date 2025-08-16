@@ -38,7 +38,7 @@ router.post('/', asyncHandler(async (req, res) => {
 
     try {
         const subCategory = new SubCategory({ name, categoryId });
-        const newSubCategory = await subCategory.save();
+        await subCategory.save();
         res.json({ success: true, message: "Sub-category created successfully.", data: null });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });

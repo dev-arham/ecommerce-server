@@ -6,10 +6,14 @@ const posterSchema = new mongoose.Schema({
     required: true,
     trim: true
   },
+  targetUrl: {
+    type: String,
+    required: false
+  },
   imageUrl: {
     type: String,
     required: true
-  }
+  },
 }, {
   timestamps: true 
 });
