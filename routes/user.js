@@ -8,6 +8,36 @@ const bcrypt = require("bcrypt");
 const upload = require("../middlewares/multer.middleware.js").upload;
 const { uploadUserImage } = require('../uploadFile');
 
+// Middleware to check if user is admin
+const verifyAdmin = asyncHandler(async (req, res, next) => {
+    if (!req.user) {
+        return res.status(401).json({ success: false, message: "Authentication required" });
+    }
+    
+    if (req.user.role !== 'admin') {
+        return res.status(403).json({ success: false, message: "Admin access required" });
+    }
+    
+    next();
+});
+
+// Middleware to check if user is admin or accessing their own data
+const verifyAdminOrOwner = asyncHandler(async (req, res, next) => {
+    if (!req.user) {
+        return res.status(401).json({ success: false, message: "Authentication required" });
+    }
+    
+    const targetUserId = req.params.id;
+    const currentUserId = req.user._id.toString();
+    
+    // Allow if user is admin or accessing their own data
+    if (req.user.role === 'admin' || currentUserId === targetUserId) {
+        next();
+    } else {
+        return res.status(403).json({ success: false, message: "Access denied. You can only access your own data." });
+    }
+});
+
 
 
 const generateAccessTokenAndRefreshToken = async(userId)=>{
@@ -27,8 +57,8 @@ const generateAccessTokenAndRefreshToken = async(userId)=>{
     }
 }
 
-// Get all users with pagination
-router.get('/', asyncHandler(async (req, res) => {
+// Get all users with pagination (Admin only)
+router.get('/', verifyJWT, verifyAdmin, asyncHandler(async (req, res) => {
     try {
         const page = parseInt(req.query.page) || 1;
         const limit = Math.min(parseInt(req.query.limit) || 10, 100);
@@ -91,43 +121,42 @@ router.post('/login', async (req, res) => {
         // Check if the user exists
         const user = await User.findOne({ $or: [{ username: username }, { email: email }] });
 
-
         if (!user) {
             return res.status(401).json({ success: false, message: "Invalid Credentials." });
         }
+        
         // Check if the password is correct
         const isPasswordValid = await user.isPasswordCorrect(password)
         if (!isPasswordValid) {
             return res.status(401).json({ success: false, message: "Invalid Credentials." });
         }
+
+        // GENERATE REFRESH TOKEN 
+        const {accessToken, refreshToken} = await generateAccessTokenAndRefreshToken(user._id)
+
+        const loggedInUser = await User.findByIdAndUpdate(user._id, { $set: { refreshToken: refreshToken } }, { new: true }).select("-password -refreshToken");
+
+        // JUST FOR NOT RETURN PASSWORD AND TOKEN TO THE USER
+
+        //COOKIE
+        const option = {
+            httpOnly : true,
+            secure:true
+        }
+        return res.status(200)
+        .cookie("accessToken" , accessToken , option)
+        .cookie("refreshToken" , refreshToken , option)
+        .json({
+           success:true,
+           message :"Login Successful",
+           data: loggedInUser,
+           accessToken: accessToken,
+           refreshToken: refreshToken,
+        })
+        
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
     }
-    const user = await User.findOne({ $or: [{ username: username }, { email: email }] });
-
-    // GENERATE REFRESH TOKEN 
-    const {accessToken, refreshToken} = await generateAccessTokenAndRefreshToken(user._id)
-
-    const loggedInUser = await User.findByIdAndUpdate(user._id, { $set: { refreshToken: refreshToken } }, { new: true }).select("-password -refreshToken");
-
-    // JUST FOR NOT RETURN PASSWORD AND TOKEN TO THE USER
-
-    //COOKIE
-    const option = {
-        httpOnly : true,
-        secure:true
-    }
-    return res.status(200)
-    .cookie("accessToken" , accessToken , option)
-    .cookie("refreshToken" , refreshToken , option)
-    .json({
-       success:true,
-       message :"Login Successful",
-       data: loggedInUser,
-       accessToken: accessToken,
-       refreshToken: refreshToken,
-    })
-   
 });
 
 //LOGOUT USER 
@@ -164,9 +193,7 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
     const incomingRefreshToken = req.cookies.refreshToken || req.body.refreshToken
 
     if (!incomingRefreshToken) {
-        
-        res.status(401).json({ success: false, message:"unauthorized request"  });
-
+        return res.status(401).json({ success: false, message:"unauthorized request"  });
     }
 
     try {
@@ -178,13 +205,11 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
         const user = await User.findById(decodedToken?._id)
     
         if (!user) {
-        res.status(401).json({ success: false, message:"Invalid refresh token"  });
-
+            return res.status(401).json({ success: false, message:"Invalid refresh token"  });
         }
     
         if (incomingRefreshToken !== user.refreshToken) {
-            res.status(401).json({ success: false, message:"Refresh token is expired or used"  });
-            
+            return res.status(401).json({ success: false, message:"Refresh token is expired or used"  });
         }
     
         const options = {
@@ -217,14 +242,13 @@ const changeCurrentPassword = asyncHandler(async(req, res) => {
     const isPasswordCorrect = await user.isPasswordCorrect(oldPassword)
 
     if (!isPasswordCorrect) {
-        res.status(400).json({ success: false, message:"Invalid old password"  });
-
+        return res.status(400).json({ success: false, message:"Invalid old password"  });
     }
 
     user.password = newPassword
     await user.save({validateBeforeSave: false})
 
-    return res.status(400).json({ success: true, message:"Password Changed Successfully"  });
+    return res.status(200).json({ success: true, message:"Password Changed Successfully"  });
 
 })
 router.route("/change-password").post(verifyJWT, changeCurrentPassword)
@@ -247,23 +271,26 @@ router.route("/verify-user").get(verifyJWT, verifyCurrentUser)
 //update user 
 
 const updateAccountDetails = asyncHandler(async(req, res) => {
-    const {fullName, email} = req.body
+    const {firstName, lastName, username, email, phone} = req.body
 
-    if (!fullName || !email) {
-        throw new ApiError(400, "All fields are required")
+    if (!firstName || !lastName || !email || !username) {
+        return res.status(400).json({ success: false, message: "firstName, lastName, username, and email are required" });
     }
 
     const user = await User.findByIdAndUpdate(
         req.user?._id,
         {
             $set: {
-                fullName,
-                email: email
+                firstName,
+                lastName,
+                username,
+                email: email,
+                ...(phone && { phone })
             }
         },
         {new: true}
         
-    ).select("-password")
+    ).select("-password -refreshToken")
 
     return res.json({ success: true, message: "Account details updated successfully", data: user });
    
@@ -309,11 +336,11 @@ const updateUserProfileImage = asyncHandler(async(req, res) => {
 router.route("/profile-image/:id").patch(verifyJWT, updateUserProfileImage)
 
 
-// Get a user by ID
-router.get('/:id', asyncHandler(async (req, res) => {
+// Get a user by ID (Admin or owner only)
+router.get('/:id', verifyJWT, verifyAdminOrOwner, asyncHandler(async (req, res) => {
     try {
         const userID = req.params.id;
-        const user = await User.findById(userID);
+        const user = await User.findById(userID).select("-password -refreshToken");
         if (!user) {
             return res.status(404).json({ success: false, message: "User not found." });
         }
@@ -340,20 +367,31 @@ router.post('/register', asyncHandler(async (req, res) => {
     }
 }));
 
-// Update a user
-router.put('/:id', asyncHandler(async (req, res) => {
+// Update a user (Admin or owner only)
+router.put('/:id', verifyJWT, verifyAdminOrOwner, asyncHandler(async (req, res) => {
     try {
         const userID = req.params.id;
-        const { name, password } = req.body;
-        if (!name || !password) {
-            return res.status(400).json({ success: false, message: "Name,  and password are required." });
+        const { firstName, lastName, username, email, phone, role } = req.body;
+        
+        if (!firstName || !lastName || !username || !email) {
+            return res.status(400).json({ success: false, message: "firstName, lastName, username, and email are required." });
+        }
+
+        // Only admin can change role
+        const updateData = { firstName, lastName, username, email };
+        if (phone) updateData.phone = phone;
+        
+        if (role && req.user.role === 'admin') {
+            updateData.role = role;
+        } else if (role && req.user.role !== 'admin') {
+            return res.status(403).json({ success: false, message: "Only admin can change user role." });
         }
 
         const updatedUser = await User.findByIdAndUpdate(
             userID,
-            { name, password },
+            { $set: updateData },
             { new: true }
-        );
+        ).select("-password -refreshToken");
 
         if (!updatedUser) {
             return res.status(404).json({ success: false, message: "User not found." });
@@ -365,15 +403,117 @@ router.put('/:id', asyncHandler(async (req, res) => {
     }
 }));
 
-// Delete a user
-router.delete('/:id', asyncHandler(async (req, res) => {
+// Admin route to update any user's data including password
+router.put('/admin/update/:id', verifyJWT, verifyAdmin, asyncHandler(async (req, res) => {
     try {
         const userID = req.params.id;
+        const { firstName, lastName, username, email, phone, role, password, profilePicture } = req.body;
+        
+        if (!firstName || !lastName || !username || !email) {
+            return res.status(400).json({ success: false, message: "firstName, lastName, username, and email are required." });
+        }
+
+        const updateData = { firstName, lastName, username, email };
+        if (phone) updateData.phone = phone;
+        if (role) updateData.role = role;
+        if (profilePicture) updateData.profilePicture = profilePicture;
+
+        // Hash password if provided
+        if (password) {
+            const encryptedPassword = await bcrypt.hash(password, 10);
+            updateData.password = encryptedPassword;
+        }
+
+        const updatedUser = await User.findByIdAndUpdate(
+            userID,
+            { $set: updateData },
+            { new: true }
+        ).select("-password -refreshToken");
+
+        if (!updatedUser) {
+            return res.status(404).json({ success: false, message: "User not found." });
+        }
+
+        res.json({ success: true, message: "User updated successfully by admin.", data: updatedUser });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+}));
+
+// Delete a user (Admin only)
+router.delete('/:id', verifyJWT, verifyAdmin, asyncHandler(async (req, res) => {
+    try {
+        const userID = req.params.id;
+        
+        // Prevent admin from deleting themselves
+        if (userID === req.user._id.toString()) {
+            return res.status(400).json({ success: false, message: "You cannot delete your own account." });
+        }
+        
         const deletedUser = await User.findByIdAndDelete(userID);
         if (!deletedUser) {
             return res.status(404).json({ success: false, message: "User not found." });
         }
         res.json({ success: true, message: "User deleted successfully." });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+}));
+
+// Admin route to change user role
+router.patch('/admin/role/:id', verifyJWT, verifyAdmin, asyncHandler(async (req, res) => {
+    try {
+        const userID = req.params.id;
+        const { role } = req.body;
+        
+        if (!role || !['user', 'admin'].includes(role)) {
+            return res.status(400).json({ success: false, message: "Valid role (user or admin) is required." });
+        }
+        
+        // Prevent admin from changing their own role
+        if (userID === req.user._id.toString()) {
+            return res.status(400).json({ success: false, message: "You cannot change your own role." });
+        }
+
+        const updatedUser = await User.findByIdAndUpdate(
+            userID,
+            { $set: { role } },
+            { new: true }
+        ).select("-password -refreshToken");
+
+        if (!updatedUser) {
+            return res.status(404).json({ success: false, message: "User not found." });
+        }
+
+        res.json({ success: true, message: `User role updated to ${role} successfully.`, data: updatedUser });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+}));
+
+// Admin route to reset user password
+router.patch('/admin/reset-password/:id', verifyJWT, verifyAdmin, asyncHandler(async (req, res) => {
+    try {
+        const userID = req.params.id;
+        const { newPassword } = req.body;
+        
+        if (!newPassword || newPassword.length < 6) {
+            return res.status(400).json({ success: false, message: "Password must be at least 6 characters long." });
+        }
+
+        const encryptedPassword = await bcrypt.hash(newPassword, 10);
+        
+        const updatedUser = await User.findByIdAndUpdate(
+            userID,
+            { $set: { password: encryptedPassword, refreshToken: undefined } },
+            { new: true }
+        ).select("-password -refreshToken");
+
+        if (!updatedUser) {
+            return res.status(404).json({ success: false, message: "User not found." });
+        }
+
+        res.json({ success: true, message: "User password reset successfully. User will need to login again." });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
     }

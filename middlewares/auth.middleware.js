@@ -7,8 +7,7 @@ const verifyJWT = asyncHandler(async(req, res, next) => {
         const token = req.cookies?.accessToken || req.header("Authorization")?.replace("Bearer ", "")
         
         if (!token) {
-            res.status(401).json({ success: false, message: error.message });
-
+            return res.status(401).json({ success: false, message: "Access token is required" });
         }
     
         const decodedToken = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET)
@@ -16,16 +15,13 @@ const verifyJWT = asyncHandler(async(req, res, next) => {
         const user = await User.findById(decodedToken?._id).select("-password -refreshToken")
     
         if (!user) {
-            
-            res.status(403).json({ success: false, message: "Invalid Access Token " });
-
+            return res.status(403).json({ success: false, message: "Invalid Access Token" });
         }
     
         req.user = user
         next()
-    }catch(err) {
-        res.status(500).json({ success: false, message: err.message });
-
+    } catch(err) {
+        return res.status(500).json({ success: false, message: err.message });
     }
     
 })
