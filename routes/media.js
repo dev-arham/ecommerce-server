@@ -8,7 +8,6 @@ const dotenv = require('dotenv');
 dotenv.config();
 
 const serverUrl = process.env.SERVER_URL;
-const serverPort = process.env.PORT;
 
 // Helper function to validate media type
 const isValidMediaType = (mediaType) => {
@@ -146,7 +145,7 @@ router.post('/upload', asyncHandler(async (req, res) => {
             }
             
             const { urlPath } = getMediaConfig(mediaType);
-            const imageUrl = `${serverUrl}:${serverPort}${urlPath}${req.file.filename}`;
+            const imageUrl = `${serverUrl}${urlPath}${req.file.filename}`;
 
             const fileInfo = {
                 filename: req.file.filename,
@@ -220,7 +219,7 @@ router.post('/upload/multiple', asyncHandler(async (req, res) => {
             const { urlPath } = getMediaConfig(mediaType);
             
             const filesInfo = req.files.map(file => {
-                const imageUrl = `${serverUrl}:${serverPort}${urlPath}${file.filename}`;
+                const imageUrl = `${serverUrl}${urlPath}${file.filename}`;
 
                 return {
                     filename: file.filename,
@@ -314,7 +313,7 @@ router.get('/list', asyncHandler(async (req, res) => {
         }
         
         const { uploadPath, urlPath } = getMediaConfig(mediaType);
-        const urlPrefix = `${serverUrl}:${serverPort}${urlPath}`;
+        const urlPrefix = `${serverUrl}${urlPath}`;
 
         // Check if directory exists
         if (!fs.existsSync(uploadPath)) {
